@@ -1,0 +1,10 @@
+syntax: glob
+
+# vim artifacts
+**.swp
+**.swo
+
+# build artifacts
+.waf**
+.lock-waf_*_build
+build/**
