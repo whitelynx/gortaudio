@@ -41,3 +41,9 @@ Installing
 ```bash
 ./waf install
 ```
+
+
+License
+-------
+
+GoRtAudio is released under the terms of the MIT license; see the [LICENSE](./LICENSE) file for details.
