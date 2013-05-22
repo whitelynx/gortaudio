@@ -2,6 +2,7 @@ top = '.'
 out = 'build'
 
 
+import os
 import re
 
 from waflib import Logs, Task, TaskGen, Utils
@@ -33,36 +34,8 @@ def configure(ctx):
 
 
 def build(ctx):
-    #NOTE: if you use ant_glob, use it like this: bld.path.ant_glob('*.go', excl='*_test.go')
-
-    #ctx(
-    #        features='cxx go gopackage',
-    #        source='RtAudio.i',
-    #        target='gortaudio',
-    #        swig_flags='-c++ -go -intgosize 64 -Wall -package gortaudio',
-    #        use=['RTAUDIO'],
-    #        )
-
-    #ctx(
-    #        #features='goswig cxx cxxshlib',
-    #        features='cxx cxxshlib',
-    #        source='RtAudio.i',
-    #        target='RtAudioWrapper',
-    #        swig_flags='-c++ -go -intgosize 64 -Wall -package gortaudio',
-    #        use=['RTAUDIO'],
-    #        )
-    #ctx(
-    #        features='cgo c go gopackage',
-    #        name='gortaudio',
-    #        target='gortaudio',
-    #        use=['RtAudioWrapper'],
-    #        )
-
     ctx(
-            #features='goswig cxx cxxshlib',
-            #features='go gopackage cxx cxxshlib cgo c',
             features='go gopackage cxx cxxshlib c',
-            #features='go gopackage cxx cgo c',
             source='RtAudio.i',
             name='gortaudio',
             target='gortaudio',
@@ -70,22 +43,12 @@ def build(ctx):
             use=['RTAUDIO'],
             )
 
-    #ctx.add_group()
     ctx(
             features='go goprogram uselib',
             source='test_gortaudio.go',
             target='test_gortaudio',
             use=['gortaudio'],
-            #gocflags=['-I.', '-I..'],
             )
-
-
-#@TaskGen.feature('goc')
-#class goc(Task.Task):
-#    color = 'CYAN'
-#    run_str = '${GO_6C} ${GCFLAGS} ${GCPATH_ST:INCPATHS} -o ${TGT} ${SRC}'
-#    ext_in = ['.c']
-#    ext_out = ['.6']
 
 
 class go6g(Task.Task):
@@ -95,9 +58,26 @@ class go6g(Task.Task):
 
 
 class go6c(Task.Task):
-    run_str = '${GO_6C} ${GCFLAGS} ${GO6C_INC_ST:GOPKGDIR} ${GO6C_INC_ST:INCPATHS} -o ${TGT} ${SRC}'
+    run_str = '${GO_6C} ${GCFLAGS} ${GO6C_INC_ST:GOINC} ${GO6C_INC_ST:INCPATHS} -o ${TGT} ${SRC}'
     color = 'CYAN'
     before = ['gopackage']
+
+
+@TaskGen.feature('gopackage')
+@TaskGen.before_method('modify_install_path')
+def override_modify_install_path(self):
+    """Override the default install path provided by the 'go' tool, correctly setting the package path."""
+    if not self.env.GOSRC:
+        self.env.GOSRC = os.path.join(self.env.GOPATH or self.env.GOROOT, 'src')
+
+    if not self.env.GOMODULE:
+        goModule = self.bld.srcnode.path_from(self.bld.root.find_dir(self.env['GOSRC']))
+        self.env.GOMODULE = goModule
+        self.env.GOMODULE_BASE = os.path.basename(goModule)
+        self.env.GOMODULE_PREFIX = os.path.dirname(goModule)
+
+    if not hasattr(self, 'install_path'):
+        self.install_path = '${GOLIBDIR}/${GOMODULE_PREFIX}'
 
 
 @swigf
@@ -105,8 +85,8 @@ def swig_go(self):
     if not self.generator.env['GO6C_INC_ST']:
         self.generator.env['GO6C_INC_ST'] = ['-I']
 
-    if not self.generator.env['GOPKGDIR']:
-        self.generator.env['GOPKGDIR'] = [self.generator.env['GOTOOLDIR'].replace('/tool/', '/')]
+    if not self.generator.env['GOINC']:
+        self.generator.env['GOINC'] = [self.generator.env['GOTOOLDIR'].replace('/tool/', '/')]
 
     self.generator.env.append_value('CFLAGS', self.generator.env.GOGCCFLAGS)
     self.generator.env.append_value('CXXFLAGS', self.generator.env.GOGCCFLAGS)
@@ -139,14 +119,21 @@ def swig_go(self):
             tgt=[shlibFile],
             )
     shlibTask.set_run_after(self)
+
     for t in self.generator.compiled_tasks:
         shlibTask.set_run_after(t)
         shlibTask.inputs.extend(t.outputs)
+
+    shlibInstTask = self.generator.bld.install_files(
+            getattr(self.generator, 'shlib_install_path', '${GOLIBDIR}/${GOMODULE_PREFIX}'),
+            shlibTask.outputs[:], env=self.env, chmod=getattr(self, 'chmod', int('744', 8))
+            )
 
     ge = self.generator.bld.producer
     ge.outstanding.insert(0, gcBuildTask)
     ge.outstanding.insert(0, goBuildTask)
     ge.outstanding.insert(0, shlibTask)
+    ge.outstanding.append(shlibInstTask)
     ge.total += 3
 
     packTask = None
@@ -161,31 +148,5 @@ def swig_go(self):
         packTask.set_run_after(gcBuildTask)
         packTask.inputs = [goBuildTask.outputs[0], gcBuildTask.outputs[0]]
 
-        #try:
-        #    ltask = self.generator.link_task
-        #except AttributeError:
-        #    pass
-        #else:
-        #    packTask.inputs.append(ltask.outputs[0])
-
-        #packTask.inputs.append(shlibTask.outputs[0])
-
     self.outputs.append(goFile)
     self.outputs.append(gcFile)
-
-
-@TaskGen.feature('goswig')
-@TaskGen.before('process_source', 'process_rule')
-def dynamic_post(self):
-    """
-    bld(dynamic_source='*.c', ..) will search for source files to add to the attribute 'source'
-    we could also call "eval" or whatever expression
-    """
-    if not getattr(self, 'dynamic_source', None):
-        return
-    self.source = Utils.to_list(self.source)
-    self.source.extend(self.path.get_bld().ant_glob(self.dynamic_source, remove=False))
-    #self.meths.append('infinite_loop')
-
-    # if headers are created dynamically, assign signatures manually:
-    # for x in self.path.get_bld().ant_glob('**/*.h', remove=False): x.sig = Utils.h_file(x.abspath())
