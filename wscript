@@ -43,13 +43,6 @@ def build(ctx):
             use=['RTAUDIO'],
             )
 
-    ctx(
-            features='go goprogram uselib',
-            source='test_gortaudio.go',
-            target='test_gortaudio',
-            use=['gortaudio'],
-            )
-
 
 class go6g(Task.Task):
     run_str = '${GO_6G} ${GCFLAGS} -o ${TGT} ${SRC}'

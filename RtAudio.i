@@ -791,38 +791,56 @@ typedef RtAudio::StreamOptions StreamOptions;
 %insert(go_wrapper) %{
 type RtAudioFormat uint32
 const (
-    RTAUDIO_SINT8 RtAudioFormat = 0x1; // 8-bit signed integer.
-    RTAUDIO_SINT16 = 0x2;   // 16-bit signed integer.
-    RTAUDIO_SINT24 = 0x4;   // 24-bit signed integer.
-    RTAUDIO_SINT32 = 0x8;   // 32-bit signed integer.
-    RTAUDIO_FLOAT32 = 0x10; // Normalized between plus/minus 1.0.
-    RTAUDIO_FLOAT64 = 0x20; // Normalized between plus/minus 1.0.
+    RTAUDIO_SINT8 RtAudioFormat = 0x1 // 8-bit signed integer.
+    RTAUDIO_SINT16 = 0x2              // 16-bit signed integer.
+    RTAUDIO_SINT24 = 0x4              // 24-bit signed integer.
+    RTAUDIO_SINT32 = 0x8              // 32-bit signed integer.
+    RTAUDIO_FLOAT32 = 0x10            // Normalized between plus/minus 1.0.
+    RTAUDIO_FLOAT64 = 0x20            // Normalized between plus/minus 1.0.
 )
 
 type RtAudioStreamFlags uint
 const (
-    RTAUDIO_NONINTERLEAVED RtAudioStreamFlags = 0x1; // Use non-interleaved buffers (default = interleaved).
-    RTAUDIO_MINIMIZE_LATENCY = 0x2;  // Attempt to set stream parameters for lowest possible latency.
-    RTAUDIO_HOG_DEVICE = 0x4;        // Attempt grab device and prevent use by others.
-    RTAUDIO_SCHEDULE_REALTIME = 0x8; // Try to select realtime scheduling for callback thread.
-    RTAUDIO_ALSA_USE_DEFAULT = 0x10; // Use the "default" PCM device (ALSA only).
+    RTAUDIO_NONINTERLEAVED RtAudioStreamFlags = 0x1 // Use non-interleaved buffers (default = interleaved).
+    RTAUDIO_MINIMIZE_LATENCY = 0x2                  // Attempt to set stream parameters for lowest possible latency.
+    RTAUDIO_HOG_DEVICE = 0x4                        // Attempt grab device and prevent use by others.
+    RTAUDIO_SCHEDULE_REALTIME = 0x8                 // Try to select realtime scheduling for callback thread.
+    RTAUDIO_ALSA_USE_DEFAULT = 0x10                 // Use the "default" PCM device (ALSA only).
 )
 
 type RtAudioStreamStatus uint
 const (
-    RTAUDIO_INPUT_OVERFLOW RtAudioStreamStatus = 0x1; // Input data was discarded because of an overflow condition at the driver.
-    RTAUDIO_OUTPUT_UNDERFLOW = 0x2;  // The output buffer ran low, likely causing a gap in the output sound.
+    RTAUDIO_INPUT_OVERFLOW RtAudioStreamStatus = 0x1 // Input data was discarded because of an overflow condition at the driver.
+    RTAUDIO_OUTPUT_UNDERFLOW = 0x2 // The output buffer ran low, likely causing a gap in the output sound.
 )
 
-var RtAudioApiNames = map[RtAudioApi]string {
-    RtAudioUNSPECIFIED: "UNSPECIFIED",
-    RtAudioLINUX_ALSA: "LINUX_ALSA",
-    RtAudioLINUX_PULSE: "LINUX_PULSE",
-    RtAudioLINUX_OSS: "LINUX_OSS",
-    RtAudioUNIX_JACK: "UNIX_JACK",
-    RtAudioMACOSX_CORE: "MACOSX_CORE",
-    RtAudioWINDOWS_ASIO: "WINDOWS_ASIO",
-    RtAudioWINDOWS_DS: "WINDOWS_DS",
-    RtAudioRTAUDIO_DUMMY: "RTAUDIO_DUMMY",
+//type RtAudioApi int -- already declared by SWIG
+const (
+    UNSPECIFIED RtAudioApi = iota // Search for a working compiled API.
+    LINUX_ALSA                    // The Advanced Linux Sound Architecture API.
+    LINUX_PULSE                   // The Linux PulseAudio API.
+    LINUX_OSS                     // The Linux Open Sound System API.
+    UNIX_JACK                     // The Jack Low-Latency Audio Server API.
+    MACOSX_CORE                   // Macintosh OS-X Core Audio API.
+    WINDOWS_ASIO                  // The Steinberg Audio Stream I/O API.
+    WINDOWS_DS                    // The Microsoft Direct Sound API.
+    RTAUDIO_DUMMY                 // A compilable but non-functional API.
+)
+
+func (a RtAudioApi) String() string {
+    switch a {
+        case UNSPECIFIED: return "UNSPECIFIED"
+        case LINUX_ALSA: return "LINUX_ALSA"
+        case LINUX_PULSE: return "LINUX_PULSE"
+        case LINUX_OSS: return "LINUX_OSS"
+        case UNIX_JACK: return "UNIX_JACK"
+        case MACOSX_CORE: return "MACOSX_CORE"
+        case WINDOWS_ASIO: return "WINDOWS_ASIO"
+        case WINDOWS_DS: return "WINDOWS_DS"
+        case RTAUDIO_DUMMY: return "RTAUDIO_DUMMY"
+        default: return "INVALID"
+    }
 }
 %}
+
+// vim: ft=cpp
