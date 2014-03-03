@@ -23,15 +23,11 @@ Building
 Testing
 -------
 
-```bash
-cd build
-./test_gortaudio
-```
-
-Or, to test the installed version:
+You can try running any of the example apps in the `examples/` directory; for instance, to test out GoRtAudio using the
+default API:
 
 ```bash
-env LD_LIBRARY_PATH=$GOPATH/pkg/linux_amd64/bitbucket.org/whitelynx $GOPATH/bin/test_gortaudio
+env LD_LIBRARY_PATH=$GOPATH/pkg/linux_amd64/bitbucket.org/whitelynx go run examples/gortaudio_default.go
 ```
 
 
